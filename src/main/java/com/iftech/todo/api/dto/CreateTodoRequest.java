@@ -8,20 +8,39 @@ public class CreateTodoRequest {
 
     private String description;
 
+    /**
+     * 获取待办标题。
+     *
+     * @return 标题
+     */
     public String getTitle() {
         return title;
     }
 
+    /**
+     * 设置待办标题。
+     *
+     * @param title 标题（必填）
+     */
     public void setTitle(String title) {
         this.title = title;
     }
 
+    /**
+     * 获取待办描述。
+     *
+     * @return 描述（可为空）
+     */
     public String getDescription() {
         return description;
     }
 
+    /**
+     * 设置待办描述。
+     *
+     * @param description 描述（可为空）
+     */
     public void setDescription(String description) {
         this.description = description;
     }
 }
-

@@ -14,20 +14,48 @@ import org.springframework.web.server.ResponseStatusException;
 public class TodoService {
     private final TodoRepository todoRepository;
 
+    /**
+     * 构造方法，通过依赖注入获取存储层实现。
+     *
+     * @param todoRepository TODO 存储接口
+     */
     public TodoService(TodoRepository todoRepository) {
         this.todoRepository = todoRepository;
     }
 
+    /**
+     * 查询待办列表。
+     *
+     * @return 待办列表
+     */
     public List<TodoItem> list() {
         return todoRepository.list();
     }
 
+    /**
+     * 创建新的待办事项。
+     *
+     * <p>会生成随机 id，并初始化 completed=false，同时设置创建/更新时间。
+     *
+     * @param title       标题（由上层校验必填，这里会 trim）
+     * @param description 描述（可为空）
+     * @return 创建后的待办
+     */
     public TodoItem create(String title, String description) {
         Instant now = Instant.now();
         TodoItem item = new TodoItem(UUID.randomUUID().toString(), title.trim(), normalizeDescription(description), false, now, now);
         return todoRepository.create(item);
     }
 
+    /**
+     * 根据 id 更新待办事项的部分字段。
+     *
+     * <p>若待办不存在则抛出 404；若传入 title 但为空白则抛出 400。
+     *
+     * @param id      待办 id
+     * @param request 更新请求（字段可选）
+     * @return 更新后的待办
+     */
     public TodoItem update(String id, UpdateTodoRequest request) {
         TodoItem existing = todoRepository.findById(id);
         if (existing == null) {
@@ -58,6 +86,14 @@ public class TodoService {
         return todoRepository.update(existing);
     }
 
+    /**
+     * 切换待办事项完成状态。
+     *
+     * <p>若待办不存在则抛出 404。
+     *
+     * @param id 待办 id
+     * @return 切换后的待办
+     */
     public TodoItem toggle(String id) {
         TodoItem existing = todoRepository.findById(id);
         if (existing == null) {
@@ -68,6 +104,13 @@ public class TodoService {
         return todoRepository.update(existing);
     }
 
+    /**
+     * 删除待办事项。
+     *
+     * <p>若待办不存在则抛出 404。
+     *
+     * @param id 待办 id
+     */
     public void delete(String id) {
         boolean deleted = todoRepository.delete(id);
         if (!deleted) {
@@ -75,6 +118,12 @@ public class TodoService {
         }
     }
 
+    /**
+     * 统一处理描述字段：去除首尾空格；空字符串归一化为 null。
+     *
+     * @param description 原始描述
+     * @return 归一化后的描述
+     */
     private String normalizeDescription(String description) {
         if (description == null) {
             return null;
@@ -83,4 +132,3 @@ public class TodoService {
         return trimmed.isEmpty() ? null : trimmed;
     }
 }
-

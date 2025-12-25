@@ -7,11 +7,28 @@ const elStatus = document.getElementById('status');
 const elList = document.getElementById('todo-list');
 const elRefresh = document.getElementById('refresh-btn');
 
+/**
+ * 设置页面顶部的状态提示文本。
+ *
+ * @param {string} text 提示文本
+ * @param {'info'|'success'|'error'} type 提示类型（影响样式）
+ */
 function setStatus(text, type = 'info') {
   elStatus.textContent = text || '';
   elStatus.dataset.type = type;
 }
 
+/**
+ * 统一封装对后端 API 的请求。
+ *
+ * - 自动附加 JSON Content-Type
+ * - 兼容 204 No Content 响应
+ * - 非 2xx 时抛出 Error，优先使用后端返回的 message 字段
+ *
+ * @param {string} path 请求路径（例如 /api/todos）
+ * @param {RequestInit} options fetch 选项（method/body 等）
+ * @returns {Promise<any>} JSON 响应体；若 204 则返回 null
+ */
 async function apiRequest(path, options = {}) {
   const res = await fetch(path, {
     headers: { 'Content-Type': 'application/json' },
@@ -26,6 +43,12 @@ async function apiRequest(path, options = {}) {
   return body;
 }
 
+/**
+ * 将单个待办对象渲染为列表项 DOM 节点，并绑定按钮事件。
+ *
+ * @param {{id:string,title:string,description?:string,completed:boolean}} item 待办对象
+ * @returns {HTMLLIElement} 列表项节点
+ */
 function renderItem(item) {
   const li = document.createElement('li');
   li.className = 'item';
@@ -81,6 +104,13 @@ function renderItem(item) {
   return li;
 }
 
+/**
+ * 从后端拉取待办列表并刷新页面展示。
+ *
+ * - 先清空列表再重建
+ * - 空列表展示占位文案
+ * - 捕获异常并显示错误提示
+ */
 async function loadTodos() {
   setStatus('加载中…');
   try {
@@ -102,6 +132,13 @@ async function loadTodos() {
   }
 }
 
+/**
+ * 处理“新增待办”表单提交。
+ *
+ * - 阻止默认提交
+ * - 调用创建接口
+ * - 成功后清空输入并刷新列表
+ */
 elForm.addEventListener('submit', async (e) => {
   e.preventDefault();
   setStatus('提交中…');
@@ -122,7 +159,12 @@ elForm.addEventListener('submit', async (e) => {
   }
 });
 
+/**
+ * 刷新按钮：重新加载列表。
+ */
 elRefresh.addEventListener('click', () => loadTodos());
 
+/**
+ * 页面初始化：首次加载列表。
+ */
 loadTodos();
-
