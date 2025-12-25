@@ -15,8 +15,10 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Repository;
 
+@Profile("file")
 @Repository
 public class FileTodoRepository implements TodoRepository {
     private static final TypeReference<List<TodoItem>> LIST_TYPE = new TypeReference<List<TodoItem>>() {
