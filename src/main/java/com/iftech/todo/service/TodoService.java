@@ -5,7 +5,9 @@ import com.iftech.todo.domain.TodoItem;
 import com.iftech.todo.storage.TodoRepository;
 import java.time.Instant;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Collectors;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
@@ -32,6 +34,24 @@ public class TodoService {
         return todoRepository.list();
     }
 
+    public List<TodoItem> list(String category) {
+        String normalized = normalizeCategory(category);
+        if (normalized == null) {
+            return todoRepository.list();
+        }
+        List<TodoItem> list = todoRepository.list();
+        return list.stream().filter(item -> normalized.equals(item.getCategory())).collect(Collectors.toList());
+    }
+
+    public List<String> listCategories() {
+        List<TodoItem> list = todoRepository.list();
+        Set<String> categories = list.stream()
+                .map(TodoItem::getCategory)
+                .filter(v -> v != null && !v.trim().isEmpty())
+                .collect(Collectors.toSet());
+        return categories.stream().sorted().collect(Collectors.toList());
+    }
+
     /**
      * 创建新的待办事项。
      *
@@ -41,9 +61,10 @@ public class TodoService {
      * @param description 描述（可为空）
      * @return 创建后的待办
      */
-    public TodoItem create(String title, String description) {
+    public TodoItem create(String title, String description, String category) {
         Instant now = Instant.now();
-        TodoItem item = new TodoItem(UUID.randomUUID().toString(), title.trim(), normalizeDescription(description), false, now, now);
+        TodoItem item = new TodoItem(UUID.randomUUID().toString(), title.trim(), normalizeDescription(description),
+                normalizeCategory(category), false, now, now);
         return todoRepository.create(item);
     }
 
@@ -73,6 +94,10 @@ public class TodoService {
         }
         if (request.getDescription() != null) {
             existing.setDescription(normalizeDescription(request.getDescription()));
+            changed = true;
+        }
+        if (request.getCategory() != null) {
+            existing.setCategory(normalizeCategory(request.getCategory()));
             changed = true;
         }
         if (request.getCompleted() != null) {
@@ -129,6 +154,14 @@ public class TodoService {
             return null;
         }
         String trimmed = description.trim();
+        return trimmed.isEmpty() ? null : trimmed;
+    }
+
+    private String normalizeCategory(String category) {
+        if (category == null) {
+            return null;
+        }
+        String trimmed = category.trim();
         return trimmed.isEmpty() ? null : trimmed;
     }
 }

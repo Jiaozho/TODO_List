@@ -3,9 +3,11 @@ const apiBase = '/api/todos';
 const elForm = document.getElementById('create-form');
 const elTitle = document.getElementById('title');
 const elDescription = document.getElementById('description');
+const elCategory = document.getElementById('category');
 const elStatus = document.getElementById('status');
 const elList = document.getElementById('todo-list');
 const elRefresh = document.getElementById('refresh-btn');
+const elCategoryFilter = document.getElementById('category-filter');
 
 /**
  * 设置页面顶部的状态提示文本。
@@ -63,7 +65,15 @@ function renderItem(item) {
 
   const meta = document.createElement('div');
   meta.className = 'meta';
-  meta.textContent = item.description ? item.description : '';
+  if (item.category && item.description) {
+    meta.textContent = `${item.category} · ${item.description}`;
+  } else if (item.category) {
+    meta.textContent = item.category;
+  } else if (item.description) {
+    meta.textContent = item.description;
+  } else {
+    meta.textContent = '';
+  }
 
   left.appendChild(title);
   left.appendChild(meta);
@@ -114,7 +124,9 @@ function renderItem(item) {
 async function loadTodos() {
   setStatus('加载中…');
   try {
-    const list = await apiRequest(apiBase);
+    const selectedCategory = elCategoryFilter && elCategoryFilter.value ? elCategoryFilter.value : '';
+    const listUrl = selectedCategory ? `${apiBase}?category=${encodeURIComponent(selectedCategory)}` : apiBase;
+    const list = await apiRequest(listUrl);
     elList.innerHTML = '';
     if (!list || list.length === 0) {
       const empty = document.createElement('li');
@@ -125,6 +137,22 @@ async function loadTodos() {
       for (const item of list) {
         elList.appendChild(renderItem(item));
       }
+    }
+    if (elCategoryFilter) {
+      const categories = await apiRequest(`${apiBase}/categories`);
+      const keep = elCategoryFilter.value;
+      elCategoryFilter.innerHTML = '';
+      const all = document.createElement('option');
+      all.value = '';
+      all.textContent = '全部分类';
+      elCategoryFilter.appendChild(all);
+      for (const c of categories || []) {
+        const opt = document.createElement('option');
+        opt.value = c;
+        opt.textContent = c;
+        elCategoryFilter.appendChild(opt);
+      }
+      elCategoryFilter.value = keep;
     }
     setStatus('');
   } catch (e) {
@@ -145,12 +173,14 @@ elForm.addEventListener('submit', async (e) => {
   try {
     const title = elTitle.value;
     const description = elDescription.value;
+    const category = elCategory ? elCategory.value : '';
     await apiRequest(apiBase, {
       method: 'POST',
-      body: JSON.stringify({ title, description }),
+      body: JSON.stringify({ title, description, category }),
     });
     elTitle.value = '';
     elDescription.value = '';
+    if (elCategory) elCategory.value = '';
     await loadTodos();
     setStatus('已添加', 'success');
     setTimeout(() => setStatus(''), 1200);
@@ -163,6 +193,10 @@ elForm.addEventListener('submit', async (e) => {
  * 刷新按钮：重新加载列表。
  */
 elRefresh.addEventListener('click', () => loadTodos());
+
+if (elCategoryFilter) {
+  elCategoryFilter.addEventListener('change', () => loadTodos());
+}
 
 /**
  * 页面初始化：首次加载列表。

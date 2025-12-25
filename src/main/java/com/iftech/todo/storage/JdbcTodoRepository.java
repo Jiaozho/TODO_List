@@ -19,6 +19,7 @@ public class JdbcTodoRepository implements TodoRepository {
             item.setId(rs.getString("id"));
             item.setTitle(rs.getString("title"));
             item.setDescription(rs.getString("description"));
+            item.setCategory(rs.getString("category"));
             item.setCompleted(rs.getBoolean("completed"));
 
             Timestamp createdAt = rs.getTimestamp("created_at");
@@ -38,14 +39,14 @@ public class JdbcTodoRepository implements TodoRepository {
     @Override
     public List<TodoItem> list() {
         return jdbcTemplate.query(
-                "SELECT id, title, description, completed, created_at, updated_at FROM todo_item ORDER BY created_at DESC",
+                "SELECT id, title, description, category, completed, created_at, updated_at FROM todo_item ORDER BY created_at DESC",
                 ROW_MAPPER);
     }
 
     @Override
     public TodoItem findById(String id) {
         List<TodoItem> list = jdbcTemplate.query(
-                "SELECT id, title, description, completed, created_at, updated_at FROM todo_item WHERE id = ?",
+                "SELECT id, title, description, category, completed, created_at, updated_at FROM todo_item WHERE id = ?",
                 ROW_MAPPER,
                 id);
         return list.isEmpty() ? null : list.get(0);
@@ -54,10 +55,11 @@ public class JdbcTodoRepository implements TodoRepository {
     @Override
     public TodoItem create(TodoItem item) {
         jdbcTemplate.update(
-                "INSERT INTO todo_item (id, title, description, completed, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)",
+                "INSERT INTO todo_item (id, title, description, category, completed, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)",
                 item.getId(),
                 item.getTitle(),
                 item.getDescription(),
+                item.getCategory(),
                 item.isCompleted(),
                 toTimestamp(item.getCreatedAt()),
                 toTimestamp(item.getUpdatedAt()));
@@ -67,9 +69,10 @@ public class JdbcTodoRepository implements TodoRepository {
     @Override
     public TodoItem update(TodoItem item) {
         jdbcTemplate.update(
-                "UPDATE todo_item SET title = ?, description = ?, completed = ?, created_at = ?, updated_at = ? WHERE id = ?",
+                "UPDATE todo_item SET title = ?, description = ?, category = ?, completed = ?, created_at = ?, updated_at = ? WHERE id = ?",
                 item.getTitle(),
                 item.getDescription(),
+                item.getCategory(),
                 item.isCompleted(),
                 toTimestamp(item.getCreatedAt()),
                 toTimestamp(item.getUpdatedAt()),
@@ -87,4 +90,3 @@ public class JdbcTodoRepository implements TodoRepository {
         return instant == null ? null : Timestamp.from(instant);
     }
 }
-

@@ -14,6 +14,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -39,8 +40,13 @@ public class TodoController {
      * @return 待办列表
      */
     @GetMapping
-    public List<TodoItem> list() {
-        return todoService.list();
+    public List<TodoItem> list(@RequestParam(value = "category", required = false) String category) {
+        return todoService.list(category);
+    }
+
+    @GetMapping("/categories")
+    public List<String> categories() {
+        return todoService.listCategories();
     }
 
     /**
@@ -54,7 +60,7 @@ public class TodoController {
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     public TodoItem create(@Valid @RequestBody CreateTodoRequest request) {
-        return todoService.create(request.getTitle(), request.getDescription());
+        return todoService.create(request.getTitle(), request.getDescription(), request.getCategory());
     }
 
     /**

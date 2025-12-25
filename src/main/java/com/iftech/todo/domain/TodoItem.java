@@ -7,6 +7,7 @@ public class TodoItem {
     private String id;
     private String title;
     private String description;
+    private String category;
     private boolean completed;
 
     @JsonFormat(shape = JsonFormat.Shape.STRING)
@@ -31,10 +32,11 @@ public class TodoItem {
      * @param createdAt   创建时间
      * @param updatedAt   更新时间
      */
-    public TodoItem(String id, String title, String description, boolean completed, Instant createdAt, Instant updatedAt) {
+    public TodoItem(String id, String title, String description, String category, boolean completed, Instant createdAt, Instant updatedAt) {
         this.id = id;
         this.title = title;
         this.description = description;
+        this.category = category;
         this.completed = completed;
         this.createdAt = createdAt;
         this.updatedAt = updatedAt;
@@ -92,6 +94,14 @@ public class TodoItem {
      */
     public void setDescription(String description) {
         this.description = description;
+    }
+
+    public String getCategory() {
+        return category;
+    }
+
+    public void setCategory(String category) {
+        this.category = category;
     }
 
     /**

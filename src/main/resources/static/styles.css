@@ -53,6 +53,7 @@ body {
 }
 
 .field input,
+.select,
 .field textarea {
   width: 100%;
   box-sizing: border-box;
@@ -62,6 +63,11 @@ body {
   color: var(--text);
   padding: 10px 12px;
   outline: none;
+}
+
+.select option {
+  color: #000;
+  background: #fff;
 }
 
 .field textarea {
@@ -112,6 +118,7 @@ button.danger:hover {
 .toolbar {
   display: flex;
   justify-content: flex-end;
+  gap: 10px;
   margin-bottom: 10px;
 }
 
@@ -159,4 +166,3 @@ button.danger:hover {
   color: var(--muted);
   padding: 10px 2px;
 }
-

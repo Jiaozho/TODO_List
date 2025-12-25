@@ -50,12 +50,14 @@ class TodoControllerTest {
         String body = objectMapper.writeValueAsString(new Object() {
             public final String title = "t1";
             public final String description = "d1";
+            public final String category = "学习";
         });
 
         String created = mockMvc.perform(post("/api/todos").contentType(MediaType.APPLICATION_JSON).content(body))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.id").isString())
                 .andExpect(jsonPath("$.completed").value(false))
+                .andExpect(jsonPath("$.category").value("学习"))
                 .andReturn()
                 .getResponse()
                 .getContentAsString();
@@ -66,6 +68,20 @@ class TodoControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.length()").value(1))
                 .andExpect(jsonPath("$[0].id").value(id));
+
+        mockMvc.perform(get("/api/todos/categories"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(1))
+                .andExpect(jsonPath("$[0]").value("学习"));
+
+        mockMvc.perform(get("/api/todos").queryParam("category", "学习"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(1))
+                .andExpect(jsonPath("$[0].id").value(id));
+
+        mockMvc.perform(get("/api/todos").queryParam("category", "工作"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(0));
 
         mockMvc.perform(patch("/api/todos/" + id + "/toggle"))
                 .andExpect(status().isOk())

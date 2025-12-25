@@ -3,6 +3,7 @@ package com.iftech.todo.api.dto;
 public class UpdateTodoRequest {
     private String title;
     private String description;
+    private String category;
     private Boolean completed;
 
     /**
@@ -39,6 +40,14 @@ public class UpdateTodoRequest {
      */
     public void setDescription(String description) {
         this.description = description;
+    }
+
+    public String getCategory() {
+        return category;
+    }
+
+    public void setCategory(String category) {
+        this.category = category;
     }
 
     /**
