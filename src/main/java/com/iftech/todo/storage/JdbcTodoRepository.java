@@ -1,12 +1,13 @@
 package com.iftech.todo.storage;
 
 import com.iftech.todo.domain.TodoItem;
-import java.sql.Date;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Timestamp;
 import java.time.Instant;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.List;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.RowMapper;
@@ -14,6 +15,7 @@ import org.springframework.stereotype.Repository;
 
 @Repository
 public class JdbcTodoRepository implements TodoRepository {
+    private static final DateTimeFormatter DUE_DATE_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm");
     private static final RowMapper<TodoItem> ROW_MAPPER = new RowMapper<TodoItem>() {
         @Override
         public TodoItem mapRow(ResultSet rs, int rowNum) throws SQLException {
@@ -23,8 +25,8 @@ public class JdbcTodoRepository implements TodoRepository {
             item.setDescription(rs.getString("description"));
             item.setCategory(rs.getString("category"));
             item.setPriority(rs.getInt("priority"));
-            Date dueDate = rs.getDate("due_date");
-            item.setDueDate(dueDate == null ? null : dueDate.toString());
+            Timestamp dueDate = rs.getTimestamp("due_date");
+            item.setDueDate(dueDate == null ? null : dueDate.toLocalDateTime().format(DUE_DATE_FORMATTER));
             item.setCompleted(rs.getBoolean("completed"));
 
             Timestamp createdAt = rs.getTimestamp("created_at");
@@ -66,7 +68,7 @@ public class JdbcTodoRepository implements TodoRepository {
                 item.getDescription(),
                 item.getCategory(),
                 item.getPriority(),
-                toDate(item.getDueDate()),
+                toDueTimestamp(item.getDueDate()),
                 item.isCompleted(),
                 toTimestamp(item.getCreatedAt()),
                 toTimestamp(item.getUpdatedAt()));
@@ -81,7 +83,7 @@ public class JdbcTodoRepository implements TodoRepository {
                 item.getDescription(),
                 item.getCategory(),
                 item.getPriority(),
-                toDate(item.getDueDate()),
+                toDueTimestamp(item.getDueDate()),
                 item.isCompleted(),
                 toTimestamp(item.getCreatedAt()),
                 toTimestamp(item.getUpdatedAt()),
@@ -99,10 +101,20 @@ public class JdbcTodoRepository implements TodoRepository {
         return instant == null ? null : Timestamp.from(instant);
     }
 
-    private Date toDate(String dueDate) {
-        if (dueDate == null || dueDate.trim().isEmpty()) {
+    private Timestamp toDueTimestamp(String dueDate) {
+        if (dueDate == null) {
             return null;
         }
-        return Date.valueOf(LocalDate.parse(dueDate.trim()));
+        String trimmed = dueDate.trim();
+        if (trimmed.isEmpty()) {
+            return null;
+        }
+        LocalDateTime dt;
+        if (trimmed.length() == 10) {
+            dt = LocalDate.parse(trimmed).atStartOfDay();
+        } else {
+            dt = LocalDateTime.parse(trimmed);
+        }
+        return Timestamp.valueOf(dt);
     }
 }

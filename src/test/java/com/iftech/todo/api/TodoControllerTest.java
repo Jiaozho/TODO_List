@@ -52,7 +52,7 @@ class TodoControllerTest {
             public final String description = "d1";
             public final String category = "学习";
             public final int priority = 3;
-            public final String dueDate = "2026-01-02";
+            public final String dueDate = "2026-01-02T10:30";
         });
 
         String created1 = mockMvc.perform(post("/api/todos").contentType(MediaType.APPLICATION_JSON).content(body1))
@@ -61,7 +61,7 @@ class TodoControllerTest {
                 .andExpect(jsonPath("$.completed").value(false))
                 .andExpect(jsonPath("$.category").value("学习"))
                 .andExpect(jsonPath("$.priority").value(3))
-                .andExpect(jsonPath("$.dueDate").value("2026-01-02"))
+                .andExpect(jsonPath("$.dueDate").value("2026-01-02T10:30"))
                 .andReturn()
                 .getResponse()
                 .getContentAsString();
@@ -72,7 +72,7 @@ class TodoControllerTest {
             public final String title = "t2";
             public final String category = "学习";
             public final int priority = 1;
-            public final String dueDate = "2026-01-01";
+            public final String dueDate = "2026-01-02T09:00";
         });
 
         String created2 = mockMvc.perform(post("/api/todos").contentType(MediaType.APPLICATION_JSON).content(body2))

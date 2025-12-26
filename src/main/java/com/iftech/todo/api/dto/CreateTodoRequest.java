@@ -9,6 +9,8 @@ public class CreateTodoRequest {
     private String description;
     private String category;
     private Integer priority;
+
+    @NotBlank
     private String dueDate;
 
     /**

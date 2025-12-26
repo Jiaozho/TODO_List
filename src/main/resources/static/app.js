@@ -75,7 +75,7 @@ function renderItem(item) {
     const label = p === 3 ? '高' : p === 2 ? '中' : p === 1 ? '低' : String(item.priority);
     bits.push(`优先级:${label}`);
   }
-  if (item.dueDate) bits.push(`截止:${item.dueDate}`);
+  if (item.dueDate) bits.push(`截止:${String(item.dueDate).replace('T', ' ')}`);
   if (item.description) bits.push(item.description);
   meta.textContent = bits.join(' · ');
 

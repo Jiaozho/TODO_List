@@ -5,6 +5,8 @@ import com.iftech.todo.domain.TodoItem;
 import com.iftech.todo.storage.TodoRepository;
 import java.time.Instant;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Locale;
 import java.util.Set;
@@ -17,6 +19,7 @@ import org.springframework.web.server.ResponseStatusException;
 @Service
 public class TodoService {
     private final TodoRepository todoRepository;
+    private static final DateTimeFormatter DUE_DATE_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm");
 
     public enum Sort {
         CREATED_AT_DESC,
@@ -210,11 +213,16 @@ public class TodoService {
             return null;
         }
         try {
-            LocalDate.parse(trimmed);
+            LocalDateTime dt;
+            if (trimmed.length() == 10) {
+                dt = LocalDate.parse(trimmed).atStartOfDay();
+            } else {
+                dt = LocalDateTime.parse(trimmed);
+            }
+            return dt.format(DUE_DATE_FORMATTER);
         } catch (Exception e) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "dueDate must be yyyy-MM-dd");
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "dueDate must be yyyy-MM-ddTHH:mm");
         }
-        return trimmed;
     }
 
     private List<TodoItem> sortList(List<TodoItem> list, Sort sort) {
@@ -231,12 +239,16 @@ public class TodoService {
                 break;
             case DUE_DATE_ASC:
                 comparator = java.util.Comparator
-                        .comparing(TodoItem::getDueDate, java.util.Comparator.nullsLast(java.util.Comparator.naturalOrder()))
+                        .<TodoItem, LocalDateTime>comparing(
+                                item -> parseDueDateTime(item.getDueDate()),
+                                java.util.Comparator.nullsLast(java.util.Comparator.naturalOrder()))
                         .thenComparing(createdDesc);
                 break;
             case DUE_DATE_DESC:
                 comparator = java.util.Comparator
-                        .comparing(TodoItem::getDueDate, java.util.Comparator.nullsLast(java.util.Comparator.naturalOrder()))
+                        .<TodoItem, LocalDateTime>comparing(
+                                item -> parseDueDateTime(item.getDueDate()),
+                                java.util.Comparator.nullsLast(java.util.Comparator.naturalOrder()))
                         .reversed()
                         .thenComparing(createdDesc);
                 break;
@@ -247,6 +259,24 @@ public class TodoService {
         }
         list.sort(comparator);
         return list;
+    }
+
+    private LocalDateTime parseDueDateTime(String dueDate) {
+        if (dueDate == null) {
+            return null;
+        }
+        String trimmed = dueDate.trim();
+        if (trimmed.isEmpty()) {
+            return null;
+        }
+        try {
+            if (trimmed.length() == 10) {
+                return LocalDate.parse(trimmed).atStartOfDay();
+            }
+            return LocalDateTime.parse(trimmed);
+        } catch (Exception e) {
+            return null;
+        }
     }
 
     public Sort parseSort(String raw) {
