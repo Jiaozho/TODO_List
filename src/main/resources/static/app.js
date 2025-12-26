@@ -12,6 +12,136 @@ const elRefresh = document.getElementById('refresh-btn');
 const elCategoryFilter = document.getElementById('category-filter');
 const elSort = document.getElementById('sort');
 
+const REMINDER_ADVANCE_MS = 10 * 60 * 1000;
+const reminderTimersById = new Map();
+const remindedStorageKey = 'todo_reminded_v1';
+
+function parseLocalDateTime(raw) {
+  if (!raw || typeof raw !== 'string') return null;
+  const s = raw.trim();
+  if (!s) return null;
+  const m = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})$/.exec(s);
+  if (!m) return null;
+  const year = Number(m[1]);
+  const month = Number(m[2]);
+  const day = Number(m[3]);
+  const hour = Number(m[4]);
+  const minute = Number(m[5]);
+  const dt = new Date(year, month - 1, day, hour, minute, 0, 0);
+  return Number.isNaN(dt.getTime()) ? null : dt;
+}
+
+function getRemindedSet() {
+  try {
+    const raw = localStorage.getItem(remindedStorageKey);
+    if (!raw) return new Set();
+    const arr = JSON.parse(raw);
+    if (!Array.isArray(arr)) return new Set();
+    return new Set(arr.filter((v) => typeof v === 'string'));
+  } catch {
+    return new Set();
+  }
+}
+
+function saveRemindedSet(set) {
+  try {
+    localStorage.setItem(remindedStorageKey, JSON.stringify(Array.from(set)));
+  } catch {
+  }
+}
+
+function markReminded(key) {
+  const set = getRemindedSet();
+  set.add(key);
+  saveRemindedSet(set);
+}
+
+function hasReminded(key) {
+  return getRemindedSet().has(key);
+}
+
+function requestNotificationPermissionIfNeeded() {
+  if (!('Notification' in window)) return;
+  if (Notification.permission !== 'default') return;
+  try {
+    Notification.requestPermission();
+  } catch {
+  }
+}
+
+function showReminder(item) {
+  const dueText = item && item.dueDate ? String(item.dueDate).replace('T', ' ') : '';
+  const title = item && item.title ? String(item.title) : 'TODO';
+  const msg = `「${title}」将在 10 分钟后到期${dueText ? `（${dueText}）` : ''}`;
+  if ('Notification' in window && Notification.permission === 'granted') {
+    try {
+      new Notification('TODO 截止提醒', { body: msg });
+      return;
+    } catch {
+    }
+  }
+  window.alert(msg);
+}
+
+function clearReminderForId(id) {
+  const existing = reminderTimersById.get(id);
+  if (existing && existing.timerId) {
+    clearTimeout(existing.timerId);
+  }
+  reminderTimersById.delete(id);
+}
+
+function syncReminders(list) {
+  const items = Array.isArray(list) ? list : [];
+  const liveIds = new Set(items.map((i) => i && i.id).filter(Boolean));
+  for (const id of reminderTimersById.keys()) {
+    if (!liveIds.has(id)) {
+      clearReminderForId(id);
+    }
+  }
+
+  const now = Date.now();
+  for (const item of items) {
+    if (!item || !item.id) continue;
+    const id = item.id;
+    if (item.completed || !item.dueDate) {
+      clearReminderForId(id);
+      continue;
+    }
+    const due = parseLocalDateTime(String(item.dueDate));
+    if (!due) {
+      clearReminderForId(id);
+      continue;
+    }
+
+    const key = `${id}|${item.dueDate}`;
+    if (hasReminded(key)) {
+      clearReminderForId(id);
+      continue;
+    }
+
+    const dueMs = due.getTime();
+    if (dueMs <= now) {
+      clearReminderForId(id);
+      continue;
+    }
+
+    const remindAt = dueMs - REMINDER_ADVANCE_MS;
+    const delay = Math.max(0, remindAt - now);
+    const existing = reminderTimersById.get(id);
+    if (existing && existing.dueDate === item.dueDate) {
+      continue;
+    }
+    clearReminderForId(id);
+    const timerId = setTimeout(() => {
+      showReminder(item);
+      markReminded(key);
+      reminderTimersById.delete(id);
+    }, delay);
+    reminderTimersById.set(id, { dueDate: item.dueDate, timerId });
+  }
+}
+
 /**
  * 设置页面顶部的状态提示文本。
  *
@@ -90,6 +220,7 @@ function renderItem(item) {
   toggle.textContent = item.completed ? '设为未完成' : '设为完成';
   toggle.addEventListener('click', async () => {
     try {
+      requestNotificationPermissionIfNeeded();
       await apiRequest(`${apiBase}/${item.id}/toggle`, { method: 'PATCH' });
       await loadTodos();
     } catch (e) {
@@ -103,6 +234,7 @@ function renderItem(item) {
   del.textContent = '删除';
   del.addEventListener('click', async () => {
     try {
+      requestNotificationPermissionIfNeeded();
       await apiRequest(`${apiBase}/${item.id}`, { method: 'DELETE' });
       await loadTodos();
     } catch (e) {
@@ -135,6 +267,7 @@ async function loadTodos() {
     if (selectedSort) params.set('sort', selectedSort);
     const listUrl = params.toString() ? `${apiBase}?${params.toString()}` : apiBase;
     const list = await apiRequest(listUrl);
+    syncReminders(list);
     elList.innerHTML = '';
     if (!list || list.length === 0) {
       const empty = document.createElement('li');
@@ -177,6 +310,7 @@ async function loadTodos() {
  */
 elForm.addEventListener('submit', async (e) => {
   e.preventDefault();
+  requestNotificationPermissionIfNeeded();
   setStatus('提交中…');
   try {
     const title = elTitle.value;
@@ -204,14 +338,23 @@ elForm.addEventListener('submit', async (e) => {
 /**
  * 刷新按钮：重新加载列表。
  */
-elRefresh.addEventListener('click', () => loadTodos());
+elRefresh.addEventListener('click', () => {
+  requestNotificationPermissionIfNeeded();
+  loadTodos();
+});
 
 if (elCategoryFilter) {
-  elCategoryFilter.addEventListener('change', () => loadTodos());
+  elCategoryFilter.addEventListener('change', () => {
+    requestNotificationPermissionIfNeeded();
+    loadTodos();
+  });
 }
 
 if (elSort) {
-  elSort.addEventListener('change', () => loadTodos());
+  elSort.addEventListener('change', () => {
+    requestNotificationPermissionIfNeeded();
+    loadTodos();
+  });
 }
 
 /**
