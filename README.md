@@ -1,18 +1,18 @@
 # TODO List（Web 前后端一体）
 
 ## 1. 技术选型
-- **编程语言**：Java 8（Temurin 1.8），与后端简历一致，环境普遍可用
+- **编程语言**：Java 8（Temurin 1.8），生态成熟、快速开发、环境普遍可用
 - **后端框架**：Spring Boot 2.7.x（REST API + 静态资源托管），快速搭建、生态完善
 - **前端**：原生 HTML/CSS/JS（无构建工具），降低运行门槛，直接对接后端 API
-- **存储**：MySQL（JDBC），运行环境贴近真实业务场景
+- **存储**：MySQL（JDBC），开源，运行环境贴近真实业务场景
 
 ## 2. 项目结构设计
 ```
 src/
   main/
     java/com/iftech/todo/
-      api/              # Controller + DTO
-      domain/           # 领域模型
+      api/              # Controller（REST 接口）+ DTO（请求/响应对象）
+      domain/           # 业务对象
       service/          # 业务逻辑
       storage/          # JDBC 存储实现（默认），文件存储仅作备选（profile=file）
     resources/
@@ -26,14 +26,19 @@ src/
 ## 3. 需求细节与决策
 - **标题必填**：创建接口 `title` 必填且去除首尾空格；更新时如果传了 `title` 也要求非空
 - **描述可选**：空串/全空白会被归一化为 `null`
+- **任务分类**：支持为任务设置 `category`，并支持按分类过滤与拉取分类列表
+- **任务排序**：支持按创建时间/优先级/截止日期排序；默认按 `createdAt` 倒序返回（新建任务优先展示）
+- **优先级**：`priority` 取值 1..3（1 低 / 2 中 / 3 高），不传则默认 2
+- **截止日期**：`dueDate` 格式为 `yyyy-MM-dd`，不传则为空
 - **完成态**：提供 `PATCH /api/todos/{id}/toggle` 切换完成/未完成
-- **列表排序**：默认按 `createdAt` 倒序返回（新建任务优先展示）
 - **持久化方式**：默认使用 MySQL 表 `todo_item`，通过 `JdbcTemplate` 直接读写
 
 ## 4. API 说明
 - `GET /api/todos`：查询列表
+  - query：`category`（可选，按分类过滤），`sort`（可选：`createdAt` / `priority` / `dueDate` / `due_date_desc`）
+- `GET /api/todos/categories`：查询已有分类列表（去重、排序）
 - `POST /api/todos`：新增待办
-  - body：`{ "title": "xxx", "description": "xxx(可选)" }`
+  - body：`{ "title": "xxx", "description": "xxx(可选)", "category": "学习(可选)", "priority": 1|2|3(可选), "dueDate": "2026-01-02(可选)" }`
 - `PATCH /api/todos/{id}`：更新标题/描述/完成态（按需传字段）
 - `PATCH /api/todos/{id}/toggle`：切换完成态
 - `DELETE /api/todos/{id}`：删除
@@ -56,9 +61,9 @@ src/
   - 账号/密码：`root/root`
 - 建库建表脚本：`src/main/resources/schema.sql`
 
-### 5.2 测试说明（重要）
+### 5.2 测试说明
 - 当前测试也使用 MySQL（配置见 `src/test/resources/application.yml`）
-- 测试用例会在每次运行前执行 `DELETE FROM todo_item` 清空表数据，请确保该库为测试/开发库
+- 测试用例会在每次运行前执行 `DELETE FROM todo_item` 清空表数据，请确保该库为测试/开发库，避免误删生产数据
 
 ## 6. AI 使用说明
 - 使用 AI 协助生成基础脚手架代码、接口设计草案与前端交互逻辑，并根据 Java 8/Spring Boot 2.7 的兼容性要求做了调整与修正。
