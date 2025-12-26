@@ -4,10 +4,13 @@ const elForm = document.getElementById('create-form');
 const elTitle = document.getElementById('title');
 const elDescription = document.getElementById('description');
 const elCategory = document.getElementById('category');
+const elPriority = document.getElementById('priority');
+const elDueDate = document.getElementById('dueDate');
 const elStatus = document.getElementById('status');
 const elList = document.getElementById('todo-list');
 const elRefresh = document.getElementById('refresh-btn');
 const elCategoryFilter = document.getElementById('category-filter');
+const elSort = document.getElementById('sort');
 
 /**
  * 设置页面顶部的状态提示文本。
@@ -65,15 +68,16 @@ function renderItem(item) {
 
   const meta = document.createElement('div');
   meta.className = 'meta';
-  if (item.category && item.description) {
-    meta.textContent = `${item.category} · ${item.description}`;
-  } else if (item.category) {
-    meta.textContent = item.category;
-  } else if (item.description) {
-    meta.textContent = item.description;
-  } else {
-    meta.textContent = '';
+  const bits = [];
+  if (item.category) bits.push(item.category);
+  if (item.priority) {
+    const p = Number(item.priority);
+    const label = p === 3 ? '高' : p === 2 ? '中' : p === 1 ? '低' : String(item.priority);
+    bits.push(`优先级:${label}`);
   }
+  if (item.dueDate) bits.push(`截止:${item.dueDate}`);
+  if (item.description) bits.push(item.description);
+  meta.textContent = bits.join(' · ');
 
   left.appendChild(title);
   left.appendChild(meta);
@@ -125,7 +129,11 @@ async function loadTodos() {
   setStatus('加载中…');
   try {
     const selectedCategory = elCategoryFilter && elCategoryFilter.value ? elCategoryFilter.value : '';
-    const listUrl = selectedCategory ? `${apiBase}?category=${encodeURIComponent(selectedCategory)}` : apiBase;
+    const selectedSort = elSort && elSort.value ? elSort.value : '';
+    const params = new URLSearchParams();
+    if (selectedCategory) params.set('category', selectedCategory);
+    if (selectedSort) params.set('sort', selectedSort);
+    const listUrl = params.toString() ? `${apiBase}?${params.toString()}` : apiBase;
     const list = await apiRequest(listUrl);
     elList.innerHTML = '';
     if (!list || list.length === 0) {
@@ -174,13 +182,17 @@ elForm.addEventListener('submit', async (e) => {
     const title = elTitle.value;
     const description = elDescription.value;
     const category = elCategory ? elCategory.value : '';
+    const priority = elPriority && elPriority.value ? Number(elPriority.value) : null;
+    const dueDate = elDueDate ? elDueDate.value : '';
     await apiRequest(apiBase, {
       method: 'POST',
-      body: JSON.stringify({ title, description, category }),
+      body: JSON.stringify({ title, description, category, priority, dueDate }),
     });
     elTitle.value = '';
     elDescription.value = '';
     if (elCategory) elCategory.value = '';
+    if (elPriority) elPriority.value = '';
+    if (elDueDate) elDueDate.value = '';
     await loadTodos();
     setStatus('已添加', 'success');
     setTimeout(() => setStatus(''), 1200);
@@ -196,6 +208,10 @@ elRefresh.addEventListener('click', () => loadTodos());
 
 if (elCategoryFilter) {
   elCategoryFilter.addEventListener('change', () => loadTodos());
+}
+
+if (elSort) {
+  elSort.addEventListener('change', () => loadTodos());
 }
 
 /**

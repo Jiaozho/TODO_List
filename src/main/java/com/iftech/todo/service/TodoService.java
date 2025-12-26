@@ -4,7 +4,9 @@ import com.iftech.todo.api.dto.UpdateTodoRequest;
 import com.iftech.todo.domain.TodoItem;
 import com.iftech.todo.storage.TodoRepository;
 import java.time.Instant;
+import java.time.LocalDate;
 import java.util.List;
+import java.util.Locale;
 import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -15,6 +17,13 @@ import org.springframework.web.server.ResponseStatusException;
 @Service
 public class TodoService {
     private final TodoRepository todoRepository;
+
+    public enum Sort {
+        CREATED_AT_DESC,
+        PRIORITY_DESC,
+        DUE_DATE_ASC,
+        DUE_DATE_DESC
+    }
 
     /**
      * 构造方法，通过依赖注入获取存储层实现。
@@ -35,12 +44,17 @@ public class TodoService {
     }
 
     public List<TodoItem> list(String category) {
+        return list(category, Sort.CREATED_AT_DESC);
+    }
+
+    public List<TodoItem> list(String category, Sort sort) {
         String normalized = normalizeCategory(category);
         if (normalized == null) {
-            return todoRepository.list();
+            return sortList(todoRepository.list(), sort);
         }
         List<TodoItem> list = todoRepository.list();
-        return list.stream().filter(item -> normalized.equals(item.getCategory())).collect(Collectors.toList());
+        List<TodoItem> filtered = list.stream().filter(item -> normalized.equals(item.getCategory())).collect(Collectors.toList());
+        return sortList(filtered, sort);
     }
 
     public List<String> listCategories() {
@@ -62,9 +76,13 @@ public class TodoService {
      * @return 创建后的待办
      */
     public TodoItem create(String title, String description, String category) {
+        return create(title, description, category, null, null);
+    }
+
+    public TodoItem create(String title, String description, String category, Integer priority, String dueDate) {
         Instant now = Instant.now();
         TodoItem item = new TodoItem(UUID.randomUUID().toString(), title.trim(), normalizeDescription(description),
-                normalizeCategory(category), false, now, now);
+                normalizeCategory(category), normalizePriority(priority), normalizeDueDate(dueDate), false, now, now);
         return todoRepository.create(item);
     }
 
@@ -98,6 +116,14 @@ public class TodoService {
         }
         if (request.getCategory() != null) {
             existing.setCategory(normalizeCategory(request.getCategory()));
+            changed = true;
+        }
+        if (request.getPriority() != null) {
+            existing.setPriority(normalizePriority(request.getPriority()));
+            changed = true;
+        }
+        if (request.getDueDate() != null) {
+            existing.setDueDate(normalizeDueDate(request.getDueDate()));
             changed = true;
         }
         if (request.getCompleted() != null) {
@@ -163,5 +189,88 @@ public class TodoService {
         }
         String trimmed = category.trim();
         return trimmed.isEmpty() ? null : trimmed;
+    }
+
+    private int normalizePriority(Integer priority) {
+        if (priority == null) {
+            return TodoItem.DEFAULT_PRIORITY;
+        }
+        if (priority < 1 || priority > 3) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "priority must be 1..3");
+        }
+        return priority;
+    }
+
+    private String normalizeDueDate(String dueDate) {
+        if (dueDate == null) {
+            return null;
+        }
+        String trimmed = dueDate.trim();
+        if (trimmed.isEmpty()) {
+            return null;
+        }
+        try {
+            LocalDate.parse(trimmed);
+        } catch (Exception e) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "dueDate must be yyyy-MM-dd");
+        }
+        return trimmed;
+    }
+
+    private List<TodoItem> sortList(List<TodoItem> list, Sort sort) {
+        if (sort == null) {
+            sort = Sort.CREATED_AT_DESC;
+        }
+        java.util.Comparator<TodoItem> createdDesc = java.util.Comparator
+                .comparing(TodoItem::getCreatedAt, java.util.Comparator.nullsLast(java.util.Comparator.naturalOrder()))
+                .reversed();
+        java.util.Comparator<TodoItem> comparator;
+        switch (sort) {
+            case PRIORITY_DESC:
+                comparator = java.util.Comparator.comparingInt(TodoItem::getPriority).reversed().thenComparing(createdDesc);
+                break;
+            case DUE_DATE_ASC:
+                comparator = java.util.Comparator
+                        .comparing(TodoItem::getDueDate, java.util.Comparator.nullsLast(java.util.Comparator.naturalOrder()))
+                        .thenComparing(createdDesc);
+                break;
+            case DUE_DATE_DESC:
+                comparator = java.util.Comparator
+                        .comparing(TodoItem::getDueDate, java.util.Comparator.nullsLast(java.util.Comparator.naturalOrder()))
+                        .reversed()
+                        .thenComparing(createdDesc);
+                break;
+            case CREATED_AT_DESC:
+            default:
+                comparator = createdDesc;
+                break;
+        }
+        list.sort(comparator);
+        return list;
+    }
+
+    public Sort parseSort(String raw) {
+        if (raw == null) {
+            return Sort.CREATED_AT_DESC;
+        }
+        String normalized = raw.trim().toLowerCase(Locale.ROOT);
+        if (normalized.isEmpty()) {
+            return Sort.CREATED_AT_DESC;
+        }
+        if ("priority".equals(normalized) || "prioritydesc".equals(normalized) || "priority_desc".equals(normalized)) {
+            return Sort.PRIORITY_DESC;
+        }
+        if ("duedate".equals(normalized) || "due".equals(normalized) || "due_date".equals(normalized)
+                || "duedateasc".equals(normalized) || "due_date_asc".equals(normalized) || "dueasc".equals(normalized)) {
+            return Sort.DUE_DATE_ASC;
+        }
+        if ("duedatedesc".equals(normalized) || "due_date_desc".equals(normalized) || "duedesc".equals(normalized)) {
+            return Sort.DUE_DATE_DESC;
+        }
+        if ("created".equals(normalized) || "createdat".equals(normalized) || "created_at".equals(normalized)
+                || "createddesc".equals(normalized) || "created_at_desc".equals(normalized)) {
+            return Sort.CREATED_AT_DESC;
+        }
+        throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "invalid sort");
     }
 }

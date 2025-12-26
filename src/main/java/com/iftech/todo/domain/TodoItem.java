@@ -4,10 +4,14 @@ import com.fasterxml.jackson.annotation.JsonFormat;
 import java.time.Instant;
 
 public class TodoItem {
+    public static final int DEFAULT_PRIORITY = 2;
+
     private String id;
     private String title;
     private String description;
     private String category;
+    private int priority = DEFAULT_PRIORITY;
+    private String dueDate;
     private boolean completed;
 
     @JsonFormat(shape = JsonFormat.Shape.STRING)
@@ -32,11 +36,14 @@ public class TodoItem {
      * @param createdAt   创建时间
      * @param updatedAt   更新时间
      */
-    public TodoItem(String id, String title, String description, String category, boolean completed, Instant createdAt, Instant updatedAt) {
+    public TodoItem(String id, String title, String description, String category, int priority, String dueDate, boolean completed,
+            Instant createdAt, Instant updatedAt) {
         this.id = id;
         this.title = title;
         this.description = description;
         this.category = category;
+        this.priority = priority;
+        this.dueDate = dueDate;
         this.completed = completed;
         this.createdAt = createdAt;
         this.updatedAt = updatedAt;
@@ -102,6 +109,22 @@ public class TodoItem {
 
     public void setCategory(String category) {
         this.category = category;
+    }
+
+    public int getPriority() {
+        return priority;
+    }
+
+    public void setPriority(int priority) {
+        this.priority = priority;
+    }
+
+    public String getDueDate() {
+        return dueDate;
+    }
+
+    public void setDueDate(String dueDate) {
+        this.dueDate = dueDate;
     }
 
     /**

@@ -40,8 +40,11 @@ public class TodoController {
      * @return 待办列表
      */
     @GetMapping
-    public List<TodoItem> list(@RequestParam(value = "category", required = false) String category) {
-        return todoService.list(category);
+    public List<TodoItem> list(
+            @RequestParam(value = "category", required = false) String category,
+            @RequestParam(value = "sort", required = false) String sort
+    ) {
+        return todoService.list(category, todoService.parseSort(sort));
     }
 
     @GetMapping("/categories")
@@ -60,7 +63,7 @@ public class TodoController {
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     public TodoItem create(@Valid @RequestBody CreateTodoRequest request) {
-        return todoService.create(request.getTitle(), request.getDescription(), request.getCategory());
+        return todoService.create(request.getTitle(), request.getDescription(), request.getCategory(), request.getPriority(), request.getDueDate());
     }
 
     /**

@@ -26,6 +26,19 @@
           <label for="category">分类（可选）</label>
           <input id="category" name="category" type="text" maxlength="64" placeholder="例如：学习/工作/生活" />
         </div>
+        <div class="field">
+          <label for="priority">优先级（可选）</label>
+          <select id="priority" name="priority" class="select">
+            <option value="">默认（中）</option>
+            <option value="3">高</option>
+            <option value="2">中</option>
+            <option value="1">低</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="dueDate">截止日期（可选）</label>
+          <input id="dueDate" name="dueDate" type="date" />
+        </div>
         <div class="actions">
           <button type="submit" id="create-btn">添加</button>
           <span id="status" class="status"></span>
@@ -37,6 +50,11 @@
       <div class="toolbar">
         <select id="category-filter" class="select">
           <option value="">全部分类</option>
+        </select>
+        <select id="sort" class="select">
+          <option value="createdAt">按创建时间</option>
+          <option value="priority">按优先级</option>
+          <option value="dueDate">按截止日期</option>
         </select>
         <button id="refresh-btn" type="button">刷新</button>
       </div>

@@ -8,6 +8,8 @@ public class CreateTodoRequest {
 
     private String description;
     private String category;
+    private Integer priority;
+    private String dueDate;
 
     /**
      * 获取待办标题。
@@ -51,5 +53,21 @@ public class CreateTodoRequest {
 
     public void setCategory(String category) {
         this.category = category;
+    }
+
+    public Integer getPriority() {
+        return priority;
+    }
+
+    public void setPriority(Integer priority) {
+        this.priority = priority;
+    }
+
+    public String getDueDate() {
+        return dueDate;
+    }
+
+    public void setDueDate(String dueDate) {
+        this.dueDate = dueDate;
     }
 }

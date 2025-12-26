@@ -1,10 +1,12 @@
 package com.iftech.todo.storage;
 
 import com.iftech.todo.domain.TodoItem;
+import java.sql.Date;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Timestamp;
 import java.time.Instant;
+import java.time.LocalDate;
 import java.util.List;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.RowMapper;
@@ -20,6 +22,9 @@ public class JdbcTodoRepository implements TodoRepository {
             item.setTitle(rs.getString("title"));
             item.setDescription(rs.getString("description"));
             item.setCategory(rs.getString("category"));
+            item.setPriority(rs.getInt("priority"));
+            Date dueDate = rs.getDate("due_date");
+            item.setDueDate(dueDate == null ? null : dueDate.toString());
             item.setCompleted(rs.getBoolean("completed"));
 
             Timestamp createdAt = rs.getTimestamp("created_at");
@@ -39,14 +44,14 @@ public class JdbcTodoRepository implements TodoRepository {
     @Override
     public List<TodoItem> list() {
         return jdbcTemplate.query(
-                "SELECT id, title, description, category, completed, created_at, updated_at FROM todo_item ORDER BY created_at DESC",
+                "SELECT id, title, description, category, priority, due_date, completed, created_at, updated_at FROM todo_item ORDER BY created_at DESC",
                 ROW_MAPPER);
     }
 
     @Override
     public TodoItem findById(String id) {
         List<TodoItem> list = jdbcTemplate.query(
-                "SELECT id, title, description, category, completed, created_at, updated_at FROM todo_item WHERE id = ?",
+                "SELECT id, title, description, category, priority, due_date, completed, created_at, updated_at FROM todo_item WHERE id = ?",
                 ROW_MAPPER,
                 id);
         return list.isEmpty() ? null : list.get(0);
@@ -55,11 +60,13 @@ public class JdbcTodoRepository implements TodoRepository {
     @Override
     public TodoItem create(TodoItem item) {
         jdbcTemplate.update(
-                "INSERT INTO todo_item (id, title, description, category, completed, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)",
+                "INSERT INTO todo_item (id, title, description, category, priority, due_date, completed, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
                 item.getId(),
                 item.getTitle(),
                 item.getDescription(),
                 item.getCategory(),
+                item.getPriority(),
+                toDate(item.getDueDate()),
                 item.isCompleted(),
                 toTimestamp(item.getCreatedAt()),
                 toTimestamp(item.getUpdatedAt()));
@@ -69,10 +76,12 @@ public class JdbcTodoRepository implements TodoRepository {
     @Override
     public TodoItem update(TodoItem item) {
         jdbcTemplate.update(
-                "UPDATE todo_item SET title = ?, description = ?, category = ?, completed = ?, created_at = ?, updated_at = ? WHERE id = ?",
+                "UPDATE todo_item SET title = ?, description = ?, category = ?, priority = ?, due_date = ?, completed = ?, created_at = ?, updated_at = ? WHERE id = ?",
                 item.getTitle(),
                 item.getDescription(),
                 item.getCategory(),
+                item.getPriority(),
+                toDate(item.getDueDate()),
                 item.isCompleted(),
                 toTimestamp(item.getCreatedAt()),
                 toTimestamp(item.getUpdatedAt()),
@@ -88,5 +97,12 @@ public class JdbcTodoRepository implements TodoRepository {
 
     private Timestamp toTimestamp(Instant instant) {
         return instant == null ? null : Timestamp.from(instant);
+    }
+
+    private Date toDate(String dueDate) {
+        if (dueDate == null || dueDate.trim().isEmpty()) {
+            return null;
+        }
+        return Date.valueOf(LocalDate.parse(dueDate.trim()));
     }
 }

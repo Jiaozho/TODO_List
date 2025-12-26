@@ -227,7 +227,7 @@ public class FileTodoRepository implements TodoRepository {
      * @return 深拷贝后的对象（字段级复制）
      */
     private TodoItem cloneItem(TodoItem item) {
-        return new TodoItem(item.getId(), item.getTitle(), item.getDescription(), item.getCategory(), item.isCompleted(),
-                item.getCreatedAt(), item.getUpdatedAt());
+        return new TodoItem(item.getId(), item.getTitle(), item.getDescription(), item.getCategory(), item.getPriority(), item.getDueDate(),
+                item.isCompleted(), item.getCreatedAt(), item.getUpdatedAt());
     }
 }

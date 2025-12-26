@@ -47,27 +47,46 @@ class TodoControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.length()").value(0));
 
-        String body = objectMapper.writeValueAsString(new Object() {
+        String body1 = objectMapper.writeValueAsString(new Object() {
             public final String title = "t1";
             public final String description = "d1";
             public final String category = "学习";
+            public final int priority = 3;
+            public final String dueDate = "2026-01-02";
         });
 
-        String created = mockMvc.perform(post("/api/todos").contentType(MediaType.APPLICATION_JSON).content(body))
+        String created1 = mockMvc.perform(post("/api/todos").contentType(MediaType.APPLICATION_JSON).content(body1))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.id").isString())
                 .andExpect(jsonPath("$.completed").value(false))
                 .andExpect(jsonPath("$.category").value("学习"))
+                .andExpect(jsonPath("$.priority").value(3))
+                .andExpect(jsonPath("$.dueDate").value("2026-01-02"))
                 .andReturn()
                 .getResponse()
                 .getContentAsString();
 
-        String id = objectMapper.readTree(created).get("id").asText();
+        String id1 = objectMapper.readTree(created1).get("id").asText();
+
+        String body2 = objectMapper.writeValueAsString(new Object() {
+            public final String title = "t2";
+            public final String category = "学习";
+            public final int priority = 1;
+            public final String dueDate = "2026-01-01";
+        });
+
+        String created2 = mockMvc.perform(post("/api/todos").contentType(MediaType.APPLICATION_JSON).content(body2))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.priority").value(1))
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+
+        String id2 = objectMapper.readTree(created2).get("id").asText();
 
         mockMvc.perform(get("/api/todos"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.length()").value(1))
-                .andExpect(jsonPath("$[0].id").value(id));
+                .andExpect(jsonPath("$.length()").value(2));
 
         mockMvc.perform(get("/api/todos/categories"))
                 .andExpect(status().isOk())
@@ -76,18 +95,36 @@ class TodoControllerTest {
 
         mockMvc.perform(get("/api/todos").queryParam("category", "学习"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.length()").value(1))
-                .andExpect(jsonPath("$[0].id").value(id));
+                .andExpect(jsonPath("$.length()").value(2));
 
         mockMvc.perform(get("/api/todos").queryParam("category", "工作"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.length()").value(0));
 
-        mockMvc.perform(patch("/api/todos/" + id + "/toggle"))
+        mockMvc.perform(get("/api/todos").queryParam("category", "学习").queryParam("sort", "priority"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(2))
+                .andExpect(jsonPath("$[0].id").value(id1))
+                .andExpect(jsonPath("$[1].id").value(id2));
+
+        mockMvc.perform(get("/api/todos").queryParam("category", "学习").queryParam("sort", "dueDate"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(2))
+                .andExpect(jsonPath("$[0].id").value(id2))
+                .andExpect(jsonPath("$[1].id").value(id1));
+
+        mockMvc.perform(patch("/api/todos/" + id1 + "/toggle"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.completed").value(true));
 
-        mockMvc.perform(delete("/api/todos/" + id))
+        mockMvc.perform(delete("/api/todos/" + id1))
+                .andExpect(status().isNoContent());
+
+        mockMvc.perform(get("/api/todos"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(1));
+
+        mockMvc.perform(delete("/api/todos/" + id2))
                 .andExpect(status().isNoContent());
 
         mockMvc.perform(get("/api/todos"))
